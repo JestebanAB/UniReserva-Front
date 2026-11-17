@@ -28,16 +28,19 @@ const onCreated = () => {
 </script>
 
 <template>
-    <main class="min-h-[calc(100vh-4rem)] bg-[#f5f8f4] px-6 py-8 xl:px-20">
+    <main class="min-h-[calc(100vh-4rem)] bg-white px-6 py-8 xl:px-20">
         <div class="mx-auto max-w-7xl space-y-6">
+            <nav class="text-sm text-slate-600" aria-label="Ruta de navegación">
+                <span>Inicio</span> / <span>{{ role === 'teacher' ? 'Profesor' : 'Estudiante' }}</span> /
+                <span class="font-semibold text-primary">Reserva de espacios</span>
+            </nav>
+
             <header>
-                <p class="text-sm font-bold uppercase tracking-[0.18em] text-primary">
-                    {{ role === 'teacher' ? 'Profesor' : 'Estudiante' }}
-                </p>
-                <h1 class="mt-1! mb-0! text-4xl font-bold text-secondary md:text-5xl">
-                    {{ firstName ? `Hola, ${firstName}` : 'Reservas' }}
+                <h1 class="mt-0! mb-2! max-w-4xl text-3xl font-extrabold leading-tight text-[#111] md:text-4xl">
+                    {{ firstName ? `${firstName}, elige` : 'Elige' }} el espacio que se adapte a tus necesidades,
+                    selecciona el horario y reserva en un clic:
                 </h1>
-                <p class="mt-2 text-lg text-slate-600">Reserva canchas, salas y equipos, o pídeselo a Resi.</p>
+                <p class="text-lg text-slate-600">También puedes pedírselo a Resi, nuestro asistente de IA.</p>
             </header>
 
             <nav class="flex gap-2" aria-label="Secciones">

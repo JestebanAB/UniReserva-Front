@@ -64,7 +64,7 @@ onMounted(async () => {
             No encontramos recursos con esos filtros.
         </p>
 
-        <div v-else class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div v-else class="grid gap-6 lg:grid-cols-2">
             <ResourceCard v-for="resource in resources" :key="resource.id" :resource="resource"
                 @reserve="$emit('reserve', $event)" />
         </div>

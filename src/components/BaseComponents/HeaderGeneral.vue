@@ -47,13 +47,13 @@ const logout = async () => {
             {{ logoutError }}
         </p>
         <!-- Logo y navegación -->
-        <div class="py-2 px-6 xl:px-20 flex items-center w-full justify-between bg-white">
+        <div class="py-2 px-6 xl:px-20 flex items-center w-full justify-between bg-[#111]">
             <RouterLink :to="{ name: homeRouteName}" aria-label="Ir al inicio de UniReserva" class="inline-flex">
-                <BrandLogo />
+                <BrandLogo tone="light" />
             </RouterLink>
             <!-- Responsive -->
             <div class="md:hidden flex items-center gap-4">
-                <div @click="toggleMenu" class="text-primary" style="opacity:1;transform:none">
+                <div @click="toggleMenu" class="text-white" style="opacity:1;transform:none">
                     <Transition mode="out-in" enter-active-class="transition ease-out duration-150"
                         enter-from-class="opacity-0 scale-75 rotate-45" enter-to-class="opacity-100 scale-100 rotate-0"
                         leave-active-class="transition ease-in duration-100"
@@ -71,7 +71,7 @@ const logout = async () => {
             <!-- Nav Base -->
             <div class="hidden items-center gap-2 md:flex">
                 <RouterLink v-if="canSwitchRoles" :to="{ name: 'role-selection' }"
-                    class="rounded-lg border border-primary px-4 py-2 font-bold text-primary transition hover:bg-primary hover:text-white">
+                    class="rounded-lg border border-white/70 px-4 py-2 font-bold text-white transition hover:bg-white hover:text-[#111]">
                     Cambiar de rol
                 </RouterLink>
                 <div class="relative">
