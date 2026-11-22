@@ -14,6 +14,11 @@ const api = axios.create({
   withXSRFToken: true,
 });
 
+export const resolveResourceImageUrl = (imageUrl) => {
+  if (!imageUrl?.startsWith('/api/')) return imageUrl;
+  return api.getUri({ url: imageUrl });
+};
+
 api.interceptors.response.use((response) => response, (error) => {
   if (error.response?.status === 401) {
     clearStoredAuthState();

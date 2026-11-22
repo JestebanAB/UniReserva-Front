@@ -1,5 +1,6 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { resolveResourceImageUrl } from '../../api/axios';
 import { adminService } from '../../services/adminService';
 import { reservationService } from '../../services/reservationService';
 import { getErrorMessage } from '../../services/apiErrorService';
@@ -12,6 +13,44 @@ const errorMessage = ref('');
 const form = ref(null); // null = formulario cerrado
 const editingId = ref(null);
 const isSaving = ref(false);
+const selectedImage = ref(null);
+const imagePreviewUrl = ref('');
+const imageSelectionError = ref('');
+
+const releaseImagePreview = () => {
+    if (imagePreviewUrl.value.startsWith('blob:')) URL.revokeObjectURL(imagePreviewUrl.value);
+    imagePreviewUrl.value = '';
+};
+
+const resetImageSelection = () => {
+    releaseImagePreview();
+    selectedImage.value = null;
+    imageSelectionError.value = '';
+};
+
+const onImageSelected = (event) => {
+    const image = event.target.files?.[0];
+    if (!image) return;
+
+    resetImageSelection();
+    imagePreviewUrl.value = resolveResourceImageUrl(form.value?.imageUrl) || '';
+    errorMessage.value = '';
+    if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(image.type)) {
+        imageSelectionError.value = 'Selecciona una imagen PNG, JPEG, GIF o WebP.';
+        errorMessage.value = imageSelectionError.value;
+        event.target.value = '';
+        return;
+    }
+    if (image.size > 5 * 1024 * 1024) {
+        imageSelectionError.value = 'La imagen no puede superar 5 MB.';
+        errorMessage.value = imageSelectionError.value;
+        event.target.value = '';
+        return;
+    }
+
+    selectedImage.value = image;
+    imagePreviewUrl.value = URL.createObjectURL(image);
+};
 
 const blankForm = () => ({
     categoryId: categories.value[0]?.id ?? '',
@@ -46,12 +85,15 @@ const load = async () => {
 };
 
 const openCreate = () => {
+    resetImageSelection();
     editingId.value = null;
     form.value = blankForm();
 };
 
 const openEdit = (resource) => {
+    resetImageSelection();
     editingId.value = resource.id;
+    imagePreviewUrl.value = resolveResourceImageUrl(resource.imageUrl) || '';
     form.value = {
         categoryId: resource.categoryId,
         name: resource.name,
@@ -70,8 +112,13 @@ const openEdit = (resource) => {
 };
 
 const save = async () => {
+    if (imageSelectionError.value) {
+        errorMessage.value = imageSelectionError.value;
+        return;
+    }
     errorMessage.value = '';
     isSaving.value = true;
+    let savedResource = null;
     try {
         const payload = {
             ...form.value,
@@ -81,12 +128,23 @@ const save = async () => {
             maxDurationMinutes: Number(form.value.maxDurationMinutes),
             imageUrl: form.value.imageUrl || null,
         };
-        if (editingId.value) await adminService.updateResource(editingId.value, payload);
-        else await adminService.createResource(payload);
+        savedResource = editingId.value
+            ? await adminService.updateResource(editingId.value, payload)
+            : await adminService.createResource(payload);
+        editingId.value = savedResource.id;
+        form.value.imageUrl = savedResource.imageUrl || '';
+        if (selectedImage.value) {
+            savedResource = await adminService.uploadResourceImage(savedResource.id, selectedImage.value);
+            form.value.imageUrl = savedResource.imageUrl;
+        }
+        resetImageSelection();
         form.value = null;
         await load();
     } catch (error) {
-        errorMessage.value = getErrorMessage(error, 'No se pudo guardar el recurso.');
+        const fallback = savedResource && selectedImage.value
+            ? 'El recurso se guardó, pero no se pudo subir la imagen. Puedes intentarlo de nuevo.'
+            : 'No se pudo guardar el recurso.';
+        errorMessage.value = getErrorMessage(error, fallback);
     } finally {
         isSaving.value = false;
     }
@@ -95,12 +153,13 @@ const save = async () => {
 const stateLabels = { AVAILABLE: 'Disponible', MAINTENANCE: 'En mantenimiento', INACTIVE: 'Inactivo' };
 
 onMounted(load);
+onBeforeUnmount(releaseImagePreview);
 </script>
 
 <template>
     <section class="space-y-4">
         <div class="flex justify-end">
-            <button type="button" class="rounded-xl bg-primary px-4 py-2 font-bold text-white hover:bg-secondary" @click="openCreate">+ Nuevo recurso</button>
+            <button type="button" :disabled="isSaving" class="rounded-xl bg-primary px-4 py-2 font-bold text-white hover:bg-secondary disabled:opacity-50" @click="openCreate">+ Nuevo recurso</button>
         </div>
 
         <p v-if="errorMessage" role="alert" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-800">{{ errorMessage }}</p>
@@ -117,6 +176,17 @@ onMounted(load);
 
             <label class="block md:col-span-2"><span class="mb-1 block font-bold text-secondary">Descripción</span>
                 <input v-model="form.description" class="field-input"></label>
+
+            <div class="space-y-2 md:col-span-2">
+                <label class="block">
+                    <span class="mb-1 block font-bold text-secondary">Imagen del recurso</span>
+                    <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="field-input"
+                        @change="onImageSelected">
+                    <span class="mt-1 block text-sm text-slate-500">PNG, JPEG, GIF o WebP; máximo 5 MB.</span>
+                </label>
+                <img v-if="imagePreviewUrl" :src="imagePreviewUrl" :alt="`Vista previa de ${form.name || 'la imagen del recurso'}`"
+                    class="h-48 w-full rounded-xl border border-slate-200 object-cover sm:w-80">
+            </div>
 
             <label class="block"><span class="mb-1 block font-bold text-secondary">Tipo</span>
                 <select v-model="form.resourceType" class="field-input">
@@ -149,7 +219,7 @@ onMounted(load);
                 <button type="submit" :disabled="isSaving" class="rounded-xl bg-primary px-5 py-2 font-bold text-white hover:bg-secondary disabled:opacity-50">
                     {{ isSaving ? 'Guardando...' : 'Guardar' }}
                 </button>
-                <button type="button" class="rounded-xl border border-slate-300 px-5 py-2 font-bold text-slate-600 hover:bg-slate-50" @click="form = null">Cancelar</button>
+                <button type="button" :disabled="isSaving" class="rounded-xl border border-slate-300 px-5 py-2 font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50" @click="resetImageSelection(); form = null">Cancelar</button>
             </div>
         </form>
 
@@ -166,7 +236,7 @@ onMounted(load);
                         · {{ stateLabels[resource.state] }}
                     </p>
                 </div>
-                <button type="button" class="rounded-lg border border-primary px-3 py-1.5 text-sm font-bold text-secondary hover:bg-primary hover:text-white" @click="openEdit(resource)">Editar</button>
+                <button type="button" :disabled="isSaving" class="rounded-lg border border-primary px-3 py-1.5 text-sm font-bold text-secondary hover:bg-primary hover:text-white disabled:opacity-50" @click="openEdit(resource)">Editar</button>
             </li>
         </ul>
     </section>

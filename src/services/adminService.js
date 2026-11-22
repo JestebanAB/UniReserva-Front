@@ -16,6 +16,13 @@ export const adminService = {
         return data;
     },
 
+    async uploadResourceImage(id, image) {
+        const formData = new FormData();
+        formData.append('image', image);
+        const { data } = await api.post(`api/admin/resources/${id}/image`, formData);
+        return data;
+    },
+
     // status opcional: PENDING | CONFIRMED | CANCELLED | REJECTED | COMPLETED
     async getReservations(status) {
         const { data } = await api.get('api/admin/reservations', { params: status ? { status } : {} });

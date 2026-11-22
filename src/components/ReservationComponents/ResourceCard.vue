@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { resolveResourceImageUrl } from '../../api/axios';
 import { formatClock, typeLabels } from '../../services/formatUtils';
 
 const props = defineProps({
@@ -9,13 +10,14 @@ defineEmits(['reserve']);
 
 // imageUrl viene de la BD (ej. "/images/resources/cancha-tenis-1.jpg"); si no hay, se muestra un fondo verde con ícono
 const hasImage = computed(() => Boolean(props.resource.imageUrl));
+const imageSrc = computed(() => resolveResourceImageUrl(props.resource.imageUrl));
 const fallbackIcon = computed(() => (props.resource.resourceType === 'EQUIPMENT' ? '🎲' : '🏟️'));
 </script>
 
 <template>
     <article class="grid overflow-hidden rounded-xl bg-secondary text-white shadow-md sm:grid-cols-2">
         <div class="relative min-h-52 bg-linear-to-br from-tertiary to-[#104a25]">
-            <img v-if="hasImage" :src="resource.imageUrl" :alt="resource.name" loading="lazy"
+            <img v-if="hasImage" :src="imageSrc" :alt="resource.name" loading="lazy"
                 class="absolute inset-0 h-full w-full object-cover">
             <span v-else class="absolute inset-0 flex items-center justify-center text-6xl opacity-70" aria-hidden="true">
                 {{ fallbackIcon }}
